@@ -24,8 +24,14 @@ abstract class AbstractCompileTask extends DefaultTask {
 	}
 
 	def compile(String sourceDirectory, String targetDirectory) {
-		File source = new File(getProject().projectDir, sourceDirectory)
-		File target = new File(getProject().projectDir, targetDirectory)
+		// better to leave to the user (buildDir, projectDir etc).
+		// Especially in multi module configurations
+		//		File source = new File(getProject().projectDir, sourceDirectory)
+		//		File target = new File(getProject().projectDir, targetDirectory)
+
+		File source = new File(sourceDirectory)
+		File target = new File(targetDirectory)
+
 		String imports = project.twirl.imports.join("\r\n").replaceAll("(.+)", "import \$1")
 		Codec codec = new Codec(Charset.forName((String)project.twirl.charset))
 
