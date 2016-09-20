@@ -13,37 +13,42 @@ import java.nio.charset.Charset
  * @author 67726e
  */
 abstract class AbstractCompileTask extends DefaultTask {
-	protected static final Map<String, String> FORMATTERS;
+    protected static final Map<String, String> FORMATTERS;
 
-	static {
-		FORMATTERS = new HashMap<>()
-		FORMATTERS.put("html", HtmlFormat.class.getCanonicalName())
-		FORMATTERS.put("xml", XmlFormat.class.getCanonicalName())
-		FORMATTERS.put("txt", TxtFormat.class.getCanonicalName())
-		FORMATTERS.put("js", JavaScriptFormat.class.getCanonicalName())
-	}
+    static {
+        FORMATTERS = new HashMap<>()
+        FORMATTERS.put("html", HtmlFormat.class.getCanonicalName())
+        FORMATTERS.put("xml", XmlFormat.class.getCanonicalName())
+        FORMATTERS.put("txt", TxtFormat.class.getCanonicalName())
+        FORMATTERS.put("js", JavaScriptFormat.class.getCanonicalName())
+    }
 
-	def compile(String sourceDirectory, String targetDirectory) {
-		// better to leave to the user (buildDir, projectDir etc).
-		// Especially in multi module configurations
-		//		File source = new File(getProject().projectDir, sourceDirectory)
-		//		File target = new File(getProject().projectDir, targetDirectory)
+    def compile(String sourceDirectory, String targetDirectory) {
+        // better to leave to the user (buildDir, projectDir etc).
+        // Especially in multi module configurations
+        //		File source = new File(getProject().projectDir, sourceDirectory)
+        //		File target = new File(getProject().projectDir, targetDirectory)
 
-		File source = new File(sourceDirectory)
-		File target = new File(targetDirectory)
+        File source = new File(sourceDirectory)
+        //On Jenkins give "File not found error"
+        if (source.exists()) {
+            File target = new File(targetDirectory)
+            String imports = project.twirl.imports.join("\r\n").replaceAll("(.+)", "import \$1")
+            Codec codec = new Codec(Charset.forName((String) project.twirl.charset))
 
-		String imports = project.twirl.imports.join("\r\n").replaceAll("(.+)", "import \$1")
-		Codec codec = new Codec(Charset.forName((String)project.twirl.charset))
+            final List<String> templates = findTemplates(source)
 
-		final List<String> templates = findTemplates(source)
+            for (String templatePath : templates) {
+                final File templateFile = new File(templatePath)
+                final String formatter = FORMATTERS.get(extensionOf(templateFile))
+                logger.debug("Compiling Twirl template: " + templatePath)
+                TwirlCompiler.compile(templateFile, source, target, formatter, imports, codec, false, false)
+            }
+        } else {
+            logger.debug("No Twirl template at: " + sourceDirectory)
+        }
+    }
 
-		for (String templatePath : templates) {
-			final File templateFile = new File(templatePath)
-			final String formatter = FORMATTERS.get(extensionOf(templateFile))
-			logger.debug("Compiling Twirl template: " + templatePath)
-			TwirlCompiler.compile(templateFile, source, target, formatter, imports, codec, false, false)
-		}
-	}
 
 	private static def findTemplates(File sourceDirectory) {
         	return new FileNameFinder().getFileNames(sourceDirectory.absolutePath, '**/*.scala.*')
